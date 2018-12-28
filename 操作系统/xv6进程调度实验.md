@@ -45,7 +45,7 @@ swtch:
 
 当用户进程被调度的时候，操作系统首先会调用sched函数把相关寄存器放入CPU的寄存器中，然后再把控制权交由cpu调度器。sched函数具体如下：  
 
-```cpp
+```cpp  
 void
 sched(void)
 {
@@ -67,7 +67,7 @@ sched(void)
 
 接着cpu的scheduler会通过round-robin算法在ptable里找到一个就绪的进程，然后再次将scheduler的进程切换到CPU的context中，scheduler的代码如下：  
 
-```cpp
+```cpp  
 void
 scheduler(void)
 {
@@ -104,7 +104,7 @@ scheduler(void)
 
 调度的控制流如下:  
 
-```flow   
+```flow     
 st => start: 进程1 running on cpu1  
 e => end: 进程2 running on cpu1  
 op1 => operation: 当前进程1的上下文交换到cpu1的scheduler  
@@ -116,13 +116,14 @@ st -> op1 -> op2 -> op3-> end
 
 当然，为了安全考虑，scheduler在调度的时候首先要开启处理器的中断，这样就能允许多个进程进行竞争式抢占，而且在每次调度的时候，调度器需要锁住ptable，这样就不会出现两个CPU同时调度一个进程的现象。  
 
-##  睡眠与唤醒  
+## 睡眠与唤醒  
 
 在xv6中，sleep会将当前进程转化为SLEEPING状态并调用sched以释放CPU，而wakeup则寻找一个睡眠状态的进程并把它标记为RUNNABLE。
 
 sleep的代码如下： 
 
-```cpp
+```cpp  
+
 void
 sleep(void *chan, struct spinlock *lk)
 {
@@ -132,37 +133,39 @@ sleep(void *chan, struct spinlock *lk)
   if(lk == 0)
     panic("sleep without lk");
 
-  // Must acquire ptable.lock in order to
-  // change p->state and then call sched.
-  // Once we hold ptable.lock, we can be
-  // guaranteed that we won't miss any wakeup
-  // (wakeup runs with ptable.lock locked),
-  // so it's okay to release lk.
-  if(lk != &ptable.lock){  //DOC: sleeplock0
-    acquire(&ptable.lock);  //DOC: sleeplock1
-    release(lk);
+  // Must acquire ptable.lock in order to  
+  // change p->state and then call sched.  
+  // Once we hold ptable.lock, we can be  
+  // guaranteed that we won't miss any wakeup  
+  // (wakeup runs with ptable.lock locked),  
+  // so it's okay to release lk.  
+  if(lk != &ptable.lock){  //DOC: sleeplock0  
+    acquire(&ptable.lock);  //DOC: sleeplock1  
+    release(lk);  
   }
 
-  // Go to sleep.
-  proc->chan = chan;
-  proc->state = SLEEPING;
-  sched();
+  // Go to sleep.  
+  proc->chan = chan;  
+  proc->state = SLEEPING;  
+  sched();  
 
-  // Tidy up.
-  proc->chan = 0;
+  // Tidy up.  
+  proc->chan = 0;  
 
-  // Reacquire original lock.
-  if(lk != &ptable.lock){  //DOC: sleeplock2
-    release(&ptable.lock);
-    acquire(lk);
-  }
-}
-```
+  // Reacquire original lock.  
+  if(lk != &ptable.lock){  //DOC: sleeplock2  
+    release(&ptable.lock); 
+    acquire(lk);  
+  }  
+}  
+ ```  
+
 sleep的调用者必须在当前进程并且sleep必须持有锁（因为需要修改ptable里进程的状态）  
 睡眠完成后，需要调用sched切换到CPU的调度器，然后就可以空出CPU来执行其他操作。  
 
 wakeup的代码如下：  
-```cpp
+
+```cpp  
 static void
 wakeup1(void *chan)
 {
@@ -228,7 +231,7 @@ wait(void)
       return -1;
     }
  ```
-
+  
 exit首先判断当前进程是否为Init进程，初始进程时不能用exit退出的，如果不是就关闭当前进程打开的所有文件，然后唤醒父进程，如果没有父进程就唤醒init进程，然后就当前进程设置为ZOMBIE状态，进行调度。  
 
 ```cpp
@@ -271,6 +274,7 @@ exit(void)
   sched();
   panic("zombie exit");
 }
+ ```  
 
 最后是kill函数，kill允许当前进程去终结另一个进程，实质是把另一个进程的p->killed设为1，这样当存在trap函数的时候，trap函数检查到p->killed为1，就会让它exit，然后处于一个ZOMBIE的状态，等待wait函数来释放这个进程的所有资源。  
 
@@ -295,13 +299,3 @@ kill(int pid)
   return -1;
 }
  ``` 
-
-
-
-
-
-
-
-
-
-
